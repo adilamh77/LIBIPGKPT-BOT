@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LibIPGKPT Bot – Perpustakaan Harun Al-Rasyid</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px 12px 40px;
+    }
+
+    /* ── Header ── */
+    .header {
+      width: 100%;
+      max-width: 480px;
+      background: #1a5276;
+      border-radius: 16px 16px 0 0;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: #fff;
+    }
+    .header-avatar {
+      width: 48px; height: 48px;
+      background: #f39c12;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .header-info h1 { font-size: 15px; font-weight: 700; }
+    .header-info p  { font-size: 12px; color: #aed6f1; margin-top: 2px; }
+    .online-dot {
+      width: 9px; height: 9px;
+      background: #2ecc71;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+
+    /* ── Chat window ── */
+    .chat-window {
+      width: 100%;
+      max-width: 480px;
+      background: #fff;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #dde3ea;
+      border-right: 1px solid #dde3ea;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px 14px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 420px;
+      max-height: 520px;
+    }
+
+    /* ── Bubbles ── */
+    .bubble-wrap { display: flex; align-items: flex-end; gap: 8px; }
+    .bubble-wrap.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #1a5276;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .bubble-wrap.user .avatar { background: #2980b9; }
+
+    .bubble {
+      max-width: 78%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 13.5px;
+      line-height: 1.55;
+      white-space: pre-line;
+    }
+    .bubble.bot {
+      background: #f0f4f8;
+      color: #1f2328;
+      border-bottom-left-radius: 4px;
+    }
+    .bubble.user {
+      background: #1a5276;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble a {
+      color: #2980b9;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+    .bubble.user a { color: #aed6f1; }
+
+    /* ── Quick-reply buttons ── */
+    .qr-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding: 4px 14px 10px 54px;
+    }
+    .qr-btn {
+      background: #eaf2fb;
+      border: 1px solid #aed6f1;
+      color: #1a5276;
+      border-radius: 20px;
+      padding: 6px 13px;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      font-family: inherit;
+    }
+    .qr-btn:hover { background: #d6eaf8; transform: translateY(-1px); }
+    .qr-btn:active { transform: translateY(0); }
+
+    /* ── Input bar ── */
+    .input-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-top: 1px solid #dde3ea;
+      background: #fafbfc;
+      border-radius: 0 0 16px 16px;
+    }
+    #user-input {
+      flex: 1;
+      border: 1px solid #cfd6de;
+      border-radius: 22px;
+      padding: 9px 16px;
+      font-size: 13.5px;
+      font-family: inherit;
+      outline: none;
+      resize: none;
+      height: 40px;
+      line-height: 1.4;
+      transition: border-color .2s;
+    }
+    #user-input:focus { border-color: #1a5276; }
+    #send-btn {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: #1a5276;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    #send-btn:hover { background: #21618c; }
+
+    /* ── Typing indicator ── */
+    .typing { display: flex; align-items: center; gap: 4px; padding: 4px 2px; }
+    .typing span {
+      width: 7px; height: 7px;
+      background: #95a5a6;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+
+    /* ── Footer ── */
+    .footer {
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      font-size: 11px;
+      color: #8896a5;
+      margin-top: 8px;
+    }
+
+    /* ── Scrollbar ── */
+    .messages::-webkit-scrollbar { width: 5px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: #cfd6de; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-avatar">📚</div>
+  <div class="header-info">
+    <h1>LibIPGKPT Bot</h1>
+    <p><span class="online-dot"></span>Pembantu Maya Perpustakaan Harun Al-Rasyid</p>
+  </div>
+</div>
+
+<!-- Chat -->
+<div class="chat-window">
+  <div class="messages" id="messages"></div>
+  <div class="input-bar">
+    <input id="user-input" type="text" placeholder="Taip soalan anda di sini…" autocomplete="off" />
+    <button id="send-btn" title="Hantar">&#9654;</button>
+  </div>
+</div>
+
+<p class="footer">Perpustakaan Harun Al-Rasyid · IPG Kampus Pendidikan Teknik</p>
+
+<script>
+/* ═══════════════════════════════════════════════
+   DATA & RESPONSES
+═══════════════════════════════════════════════ */
+const WHATSAPP = "https://wa.me/601117059053";
+const OPAC_URL = "https://www.ipgkpt.edu.my/perpustakaan/opac";
+const DB_URL   = "https://www.ipgkpt.edu.my/perpustakaan/pangkalan-data";
+
+const MAIN_MENU_BTNS = [
+  { label: "⏰ Waktu & Lokasi",        key: "waktu" },
+  { label: "📖 Pinjaman & Pemulangan", key: "pinjaman" },
+  { label: "🏛️ Fasiliti & Kemudahan",  key: "fasiliti" },
+  { label: "🔍 OPAC & Pangkalan Data", key: "opac" },
+  { label: "📋 Denda & Peraturan",     key: "denda" },
+  { label: "👤 Hubungi Pustakawan",    key: "escalate" },
+];
+
+const RESPONSES = {
+  waktu: {
+    text: `📍 *Lokasi:* Blok D, bersebelahan Buluh Inn, IPG Kampus Pendidikan Teknik.
+
+⏰ *Waktu Operasi:*
+• Isnin – Jumaat: 8:00 pagi – 5:00 petang
+• Sabtu, Ahad & Cuti Umum: Tutup
+
+Untuk pertanyaan lanjut, hubungi kaunter perpustakaan.`,
+    btns: [{ label: "↩ Menu Utama", key: "menu" }]
+  },
+
+  pinjaman: {
+    text: `📚 *Polisi Pinjaman Buku:*
+
+👨‍🎓 *Pelajar:*
+• Maksimum: 5 naskah
+• Tempoh: 2 minggu (14 hari)
+
+👨‍🏫 *Pensyarah / Staf:*
+• Maksimum: 10 naskah
+• Tempoh: 1 bulan (30 hari)
+
+🔄 *Cara Renew (Pinjaman Semula):*
+• Datang ke kaunter perpustakaan sebelum tarikh luput
+• Atau hubungi pustakawan melalui WhatsApp
+
+💡 Pemulangan hendaklah dilakukan sebelum atau pada tarikh akhir untuk elak denda.`,
+    btns: [
+      { label: "💬 Hubungi untuk Renew", key: "escalate" },
+      { label: "↩ Menu Utama", key: "menu" }
+    ]
+  },
+
+  fasiliti: {
+    text: `🏛️ *Fasiliti & Kemudahan Perpustakaan:*
+
+💬 *Bilik Perbincangan:*
+• Ruang Perbincangan 2 tersedia untuk tempahan
+• Hubungi kaunter untuk buat tempahan
+
+📖 *Ruang Bacaan:*
+• Ruang bacaan senyap tersedia untuk semua warga IPG KPT
+
+🖨️ *Perkhidmatan Cetak:*
+• RM 0.20 sehelai (hitam putih)
+• Bayaran di kaunter
+
+💻 *Komputer & Wi-Fi:*
+• Komputer perpustakaan tersedia untuk kegunaan pelajar
+• Wi-Fi percuma dalam kawasan perpustakaan (guna ID Matrik / ID Staf)`,
+    btns: [
+      { label: "📅 Tempah Bilik", key: "escalate" },
+      { label: "↩ Menu Utama", key: "menu" }
+    ]
+  },
+
+  opac: {
+    text: `🔍 *Carian Bahan & Pangkalan Data:*
+
+📗 *OPAC (Online Public Access Catalogue):*
+Gunakan OPAC untuk mencari buku, jurnal, dan bahan fizikal perpustakaan.
+👉 <a href="${OPAC_URL}" target="_blank">Perpustakaan Harun Al-Rasyid – Manual Web OPAC</a>
+
+📊 *Pangkalan Data & e-Jurnal:*
+Akses e-book, jurnal elektronik, dan sumber digital yang dilanggan IPG KPT.
+👉 <a href="${DB_URL}" target="_blank">Perpustakaan Harun Al-Rasyid – Pangkalan Data</a>
+
+💡 Log masuk menggunakan ID Matrik / ID Staf anda. Untuk bantuan akses, hubungi pustakawan.`,
+    btns: [
+      { label: "💬 Minta Bantuan Pustakawan", key: "escalate" },
+      { label: "↩ Menu Utama", key: "menu" }
+    ]
+  },
+
+  denda: {
+    text: `📋 *Denda & Peraturan Perpustakaan:*
+
+💸 *Denda Lewat Pemulangan:*
+• RM 0.10 sehari bagi setiap naskah yang lewat dipulangkan
+
+🚫 *Peraturan Am:*
+• Makanan & minuman TIDAK dibenarkan dalam perpustakaan
+• Senyap dijaga di ruang bacaan
+• Telefon dalam mod senyap
+• Beg besar disimpan di loker luar
+
+⚠️ *Urusan denda / rayuan* perlu dibuat terus di kaunter perpustakaan bersama pustakawan bertugas.`,
+    btns: [
+      { label: "💬 Hubungi Pustakawan", key: "escalate" },
+      { label: "↩ Menu Utama", key: "menu" }
+    ]
+  },
+
+  escalate: {
+    text: `👤 *Hubungi Pustakawan / Staf Perpustakaan:*
+
+Untuk urusan yang memerlukan bantuan manusia seperti:
+• Rayuan / pembayaran denda
+• Pengesahan bebas hutang perpustakaan
+• Tempahan bilik perbincangan
+• Bantuan teknikal OPAC / pangkalan data
+• Sebarang isu lain
+
+📲 Klik butang di bawah untuk hubungi kami melalui *WhatsApp*:`,
+    btns: [
+      { label: "📲 WhatsApp Pustakawan", key: "whatsapp" },
+      { label: "↩ Menu Utama", key: "menu" }
+    ]
+  }
+};
+
+/* ═══════════════════════════════════════════════
+   KEYWORD MAP — maps user text → intent key
+═══════════════════════════════════════════════ */
+const KEYWORD_MAP = [
+  { keys: ["waktu","buka","tutup","pukul","operasi","lokasi","mana","blok","hari"], intent: "waktu" },
+  { keys: ["pinjam","pulang","renew","buku","naskah","tempoh","minggu","bulan","renewal","return"], intent: "pinjaman" },
+  { keys: ["bilik","cetak","print","wifi","wi-fi","komputer","fasiliti","kemudahan","perbincangan","loker","ruang"], intent: "fasiliti" },
+  { keys: ["opac","cari","jurnal","ebook","e-book","pangkalan","database","digital","katalog","online"], intent: "opac" },
+  { keys: ["denda","peraturan","lewat","makanan","minum","senyap","bayar","hutang"], intent: "denda" },
+  { keys: ["staf","pustakawan","hubungi","contact","whatsapp","telegram","manusia","officer","help"], intent: "escalate" },
+];
+
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+let failCount = 0;
+
+/* ═══════════════════════════════════════════════
+   DOM HELPERS
+═══════════════════════════════════════════════ */
+const msgContainer = document.getElementById("messages");
+
+function scrollBottom() {
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+}
+
+function addBubble(text, role, isHTML = false) {
+  const wrap = document.createElement("div");
+  wrap.className = `bubble-wrap ${role}`;
+
+  const av = document.createElement("div");
+  av.className = "avatar";
+  av.textContent = role === "bot" ? "🤖" : "👤";
+
+  const bub = document.createElement("div");
+  bub.className = `bubble ${role}`;
+  if (isHTML) {
+    bub.innerHTML = text.replace(/\*([^*]+)\*/g, "<strong>$1</strong>");
+  } else {
+    bub.innerHTML = text.replace(/\*([^*]+)\*/g, "<strong>$1</strong>");
+  }
+
+  wrap.appendChild(av);
+  wrap.appendChild(bub);
+  msgContainer.appendChild(wrap);
+  scrollBottom();
+  return wrap;
+}
+
+function addButtons(btns) {
+  const wrap = document.createElement("div");
+  wrap.className = "qr-wrap";
+  btns.forEach(b => {
+    const btn = document.createElement("button");
+    btn.className = "qr-btn";
+    btn.textContent = b.label;
+    btn.addEventListener("click", () => {
+      removeAllButtons();
+      handleKey(b.key, b.label);
+    });
+    wrap.appendChild(btn);
+  });
+  msgContainer.appendChild(wrap);
+  scrollBottom();
+}
+
+function removeAllButtons() {
+  document.querySelectorAll(".qr-wrap").forEach(el => el.remove());
+}
+
+function showTyping(cb, delay = 900) {
+  const wrap = document.createElement("div");
+  wrap.className = "bubble-wrap bot";
+  wrap.id = "typing-indicator";
+  const av = document.createElement("div");
+  av.className = "avatar";
+  av.textContent = "🤖";
+  const bub = document.createElement("div");
+  bub.className = "bubble bot typing";
+  bub.innerHTML = "<span></span><span></span><span></span>";
+  wrap.appendChild(av);
+  wrap.appendChild(bub);
+  msgContainer.appendChild(wrap);
+  scrollBottom();
+  setTimeout(() => {
+    const el = document.getElementById("typing-indicator");
+    if (el) el.remove();
+    cb();
+  }, delay);
+}
+
+/* ═══════════════════════════════════════════════
+   FINE CALCULATOR — detect "X hari" + denda keywords
+═══════════════════════════════════════════════ */
+function detectFineCalc(text) {
+  const lower = text.toLowerCase();
+  // must mention denda / lewat / bayar / kena / lambat / overdue
+  const isDendaQuery = /denda|lewat|bayar|kena bayar|lambat|overdue|fine|hari/.test(lower);
+  if (!isDendaQuery) return null;
+
+  // extract the first number (digit or Malay word)
+  const malay = {
+    "satu":1,"dua":2,"tiga":3,"empat":4,"lima":5,
+    "enam":6,"tujuh":7,"lapan":8,"sembilan":9,"sepuluh":10,
+    "sebelas":11,"dua belas":12,"tiga belas":13,"empat belas":14,
+    "lima belas":15,"dua puluh":20,"sebulan":30,"seminggu":7
+  };
+
+  // try digit first
+  let days = null;
+  const digitMatch = lower.match(/(\d+)\s*hari/);
+  if (digitMatch) {
+    days = parseInt(digitMatch[1], 10);
+  } else {
+    // try Malay word for hari
+    for (const [word, val] of Object.entries(malay)) {
+      const re = new RegExp(word + "\\s*hari");
+      if (re.test(lower)) { days = val; break; }
+    }
+    // fallback: any lone digit / number in the sentence
+    if (days === null) {
+      const anyDigit = lower.match(/\b(\d+)\b/);
+      if (anyDigit) days = parseInt(anyDigit[1], 10);
+    }
+  }
+
+  if (days === null || days <= 0) return null;
+  return days;
+}
+
+/* ═══════════════════════════════════════════════
+   INTENT MATCHING
+═══════════════════════════════════════════════ */
+function detectIntent(text) {
+  const lower = text.toLowerCase();
+  for (const row of KEYWORD_MAP) {
+    if (row.keys.some(k => lower.includes(k))) return row.intent;
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSE HANDLER
+═══════════════════════════════════════════════ */
+function handleKey(key, label) {
+  if (label) addBubble(label, "user");
+
+  if (key === "menu") {
+    showTyping(() => {
+      addBubble(
+        "Pilih perkhidmatan atau maklumat yang anda ingin ketahui:",
+        "bot"
+      );
+      addButtons(MAIN_MENU_BTNS);
+    });
+    return;
+  }
+
+  if (key === "whatsapp") {
+    showTyping(() => {
+      addBubble(
+        `📲 Klik pautan berikut untuk hubungi Pustakawan melalui WhatsApp:\n<a href="${WHATSAPP}" target="_blank">+6011-17059053</a>\n\nJam operasi: Isnin–Jumaat, 8 pagi – 5 petang.`,
+        "bot",
+        true
+      );
+      addButtons([{ label: "↩ Menu Utama", key: "menu" }]);
+    });
+    return;
+  }
+
+  const resp = RESPONSES[key];
+  if (resp) {
+    failCount = 0;
+    showTyping(() => {
+      addBubble(resp.text, "bot", true);
+      if (resp.btns) addButtons(resp.btns);
+    });
+  }
+}
+
+function handleUserText(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+
+  addBubble(trimmed, "user");
+  document.getElementById("user-input").value = "";
+  removeAllButtons();
+
+  // ── Fine calculator — check BEFORE generic intent ──
+  const days = detectFineCalc(trimmed);
+  if (days !== null) {
+    failCount = 0;
+    const total = (days * 0.10).toFixed(2);
+    const books = [1, 2, 3, 5].map(n => `• ${n} naskah: RM ${(days * 0.10 * n).toFixed(2)}`).join("\n");
+    showTyping(() => {
+      addBubble(
+        `💸 *Pengiraan Denda Lewat Pemulangan:*\n\n` +
+        `📅 Bilangan hari lewat: *${days} hari*\n` +
+        `💰 Kadar denda: RM 0.10 / hari / naskah\n\n` +
+        `*Anggaran denda (1 naskah):* RM ${total}\n\n` +
+        `Jika anda meminjam lebih dari 1 naskah:\n${books}\n\n` +
+        `⚠️ Untuk pengesahan jumlah denda sebenar atau urusan pembayaran, sila hubungi kaunter perpustakaan.`,
+        "bot"
+      );
+      addButtons([
+        { label: "💬 Hubungi Pustakawan", key: "escalate" },
+        { label: "↩ Menu Utama", key: "menu" }
+      ]);
+    });
+    return;
+  }
+
+  const intent = detectIntent(trimmed);
+
+  if (intent) {
+    failCount = 0;
+    showTyping(() => {
+      const resp = RESPONSES[intent];
+      addBubble(resp.text, "bot", true);
+      if (resp.btns) addButtons(resp.btns);
+    });
+    return;
+  }
+
+  // Greet / salam handling
+  const lower = trimmed.toLowerCase();
+  if (/^(hai|hello|hi|assalam|salam|selamat|pagi|petang|malam|helo)/.test(lower)) {
+    failCount = 0;
+    showTyping(() => {
+      addBubble(
+        "👋 Selamat datang! Saya *LibIPGKPT Bot*, Pembantu Maya Perpustakaan Harun Al-Rasyid.\n\nPilih perkhidmatan yang anda ingin ketahui:",
+        "bot"
+      );
+      addButtons(MAIN_MENU_BTNS);
+    });
+    return;
+  }
+
+  // Vague / too-general
+  if (lower.length < 10 || /^(boleh|tolong|help|ok|ya|ye|no|tidak|ada)$/.test(lower)) {
+    failCount = 0;
+    showTyping(() => {
+      addBubble(
+        "Boleh — apakah perkhidmatan atau maklumat Perpustakaan Harun Al-Rasyid yang anda ingin ketahui?\n\n*(Contoh: Waktu operasi, pinjaman buku, fasiliti, atau carian OPAC)*",
+        "bot"
+      );
+      addButtons(MAIN_MENU_BTNS);
+    });
+    return;
+  }
+
+  // Fallback
+  failCount++;
+  if (failCount >= 2) {
+    failCount = 0;
+    showTyping(() => {
+      addBubble(
+        `Maaf, saya masih tidak dapat memahami soalan anda. 😔\n\nSaya akan menghubungkan anda dengan *Pustakawan* kami untuk bantuan lanjut.`,
+        "bot"
+      );
+      addButtons([
+        { label: "📲 Hubungi Pustakawan (WhatsApp)", key: "whatsapp" },
+        { label: "↩ Menu Utama", key: "menu" }
+      ]);
+    });
+  } else {
+    showTyping(() => {
+      addBubble(
+        `Maaf, saya kurang faham soalan anda. 🤔\n\nBoleh anda nyatakan topik berkenaan perpustakaan yang ingin ditanya, atau pilih daripada menu utama?`,
+        "bot"
+      );
+      addButtons(MAIN_MENU_BTNS);
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   EVENTS
+═══════════════════════════════════════════════ */
+document.getElementById("send-btn").addEventListener("click", () => {
+  handleUserText(document.getElementById("user-input").value);
+});
+
+document.getElementById("user-input").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleUserText(document.getElementById("user-input").value);
+  }
+});
+
+/* ═══════════════════════════════════════════════
+   INIT — welcome message
+═══════════════════════════════════════════════ */
+(function init() {
+  showTyping(() => {
+    addBubble(
+      `👋 *Assalamualaikum & Selamat Datang!*\n\nSaya *LibIPGKPT Bot* — Pembantu Maya Perpustakaan Harun Al-Rasyid, IPG Kampus Pendidikan Teknik.\n\nSaya sedia membantu anda dengan maklumat tentang:\n• Waktu operasi & lokasi\n• Pinjaman & pemulangan buku\n• Fasiliti & kemudahan\n• OPAC & pangkalan data\n• Denda & peraturan\n\nSila pilih topik di bawah atau taip soalan anda:`,
+      "bot"
+    );
+    addButtons(MAIN_MENU_BTNS);
+  }, 600);
+})();
+</script>
+</body>
+</html>
